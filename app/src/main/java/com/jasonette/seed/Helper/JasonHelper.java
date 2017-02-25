@@ -24,6 +24,9 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import okio.BufferedSource;
+import okio.Okio;
+
 public class JasonHelper {
     public static JSONObject style(JSONObject component, Context root_context) {
         JSONObject style = new JSONObject();
@@ -214,37 +217,19 @@ public class JasonHelper {
         return font_type;
     }
     public static String read_file(String filename, Context context) throws IOException {
-        AssetManager assets = context.getAssets();
-        final InputStream inputStream = assets.open(filename);
-        final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
-        final StringBuilder stringBuilder = new StringBuilder();
-        boolean done = false;
-        while (!done) {
-            final String line = reader.readLine();
-            done = (line == null);
-            if (line != null) {
-                stringBuilder.append("\n");
-                stringBuilder.append(line);
-            }
-        }
-        reader.close();
-        inputStream.close();
-        return stringBuilder.toString();
+        InputStream is = context.getAssets().open(filename);
+        BufferedSource source = Okio.buffer(Okio.source(is));
+        String str = source.readByteString().utf8();
+        source.close();
+        return str;
     }
     public static JSONObject read_json(String fn, Context context) throws IOException {
 
         // we're expecting a filename that looks like "file://..."
         String filename = fn.replace("file://", "file/");
 
-        String jr = null;
         try {
-            InputStream is = context.getAssets().open(filename);
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            jr = new String(buffer, "UTF-8");
-            return new JSONObject(jr);
+            return new JSONObject(read_file(filename, context));
         } catch (Exception e) {
             Log.d("Error", e.toString());
             return new JSONObject();
